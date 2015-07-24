@@ -1,0 +1,121 @@
+---
+title       : Developing Data Products Shiny App Pitch
+subtitle    : 
+author      : Michael Schwemmer
+job         : 
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+ext_widgets : {rCharts: [libraries/nvd3, libraries/polycharts]}
+---
+
+
+## Who doesn't love baseball?
+
+The purpose of this application is to allow the user to explore various baseball stats that are contained in the Lahman data set (http://www.seanlahman.com/baseball-archive/statistics/) with a minimal amount of effort.  
+
+The app allows the user to choose one of two options:
+* Interactive data visualization of various stats as a function of the year 
+* Exploratory analysis where the user chooses two stats to plot against one another in a scatter plot
+
+Once the user makes this intial choice, a new set of suboptions will appear allowing the user to specify various choices.
+
+---
+
+
+## Option 1: Visualization of baseball stats with rCharts
+
+* The first option allows the user to choose a stat to plot as a function of the year  
+* The data is then visualized using rPlot from rCharts similar to what is seen below 
+* In the actual app, the user has six choices for stats to display:
+  + Strikeouts per game, Homeruns per game, Hits per game, Errors per game, At Bats per game, and Earned Run Average
+```{r, echo=FALSE, results = 'asis'}
+suppressMessages(require(rCharts))
+library(Lahman)
+library(plyr)
+
+dat = Teams[,c('yearID', 'name', 'G', 'SO', 'HR', 'H', 'ERA', 'E', 'AB')]
+
+# Create new columns and remove all NA's
+team_data = na.omit(transform(dat, SOG = round(SO/G, 2), HRG = round(HR/G, 2),
+                              HG = round(H/G, 2), EG = round(E/G, 2), 
+                              ABG = round(AB/G, 2)))
+
+# Data set with average over all teams
+league_data = ddply(team_data, .(yearID), summarize, SOG = mean(SOG), HRG = mean(HRG),
+                    HG = mean(HG), EG = mean(EG), ERA = mean(ERA), ABG = mean(ABG))
+
+p1 <- nPlot(SOG~yearID, data = team_data, type = 'scatterChart')
+p1$xAxis( axisLabel = "Year" )
+p1$yAxis( axisLabel = "Strikeouts per Game" )
+p1$chart(tooltipContent = "#! function(key, x, y, e){ 
+              return ' ' + e.point.name } !#")
+p1$chart(forceY = c(0, 10))
+p1$chart(forceX = c(1865, 2018))
+p1$set(height=350)
+
+p1$print('chart1')
+```
+
+---
+
+## Option 2: Basic data exploration
+
+*  The second option displays scatterplots of two user chosen statistics  
+* The user can also choose to group the data according to the following categories:
+  + Rank at the end of the season, League (American AL or National NL), or no grouping
+* The user also has the option to add regression lines to the plot as seen below
+
+```{r, echo=FALSE, fig.width=12,fig.height=5}
+suppressWarnings(library(ggplot2))
+theme_set(theme_grey(base_size = 18))
+
+# Utilize salary data set
+avesal <- aggregate(salary ~ yearID + teamID, data=Salaries, FUN=mean)
+
+# Salary data just starts after 1980
+teamsSal <- subset(Teams, yearID>=1980)
+
+# Add salary to team data
+teamsSal <- merge(teamsSal, 
+                  avesal[,c("yearID", "teamID", "salary")], 
+                  by=c("yearID", "teamID"), all.x=TRUE)
+
+teamsSal <- na.omit(teamsSal)
+teamsSal$lgID<-factor(teamsSal$lgID)
+teamsSal$Rank<-factor(teamsSal$Rank)
+
+# Select certain columns
+saldat = teamsSal[,c('lgID', 'name', 'salary', 'Rank', 'attendance', 'G', 
+                     'SO', 'HR', 'H', 'ERA', 'E', 'W', 'AB')]
+
+# Add new columns to the final data set used for option 2 in the app
+sal_data = transform(saldat, SOG = round(SO/G, 2), HRG = round(HR/G, 2),
+                              HG = round(H/G, 2), EG = round(E/G, 2), 
+                              Wper = round(W/G*100, 2), 
+                              AttG = round(attendance/G, 2), ABG = round(AB/G, 2))
+
+df <- data.frame('x' = sal_data[,'salary'], 'y' = sal_data[,'Wper'], 
+                         'f' = sal_data[,'Rank'])
+g <- ggplot(data = df, aes(x=x,y=y,color=f)) + geom_point(size=3)
+g <- g + xlab('Team Salary') + ylab('Winning Percentage') + labs(color='Rank at the end of the season')
+g <- g + stat_smooth(method = 'lm', se = TRUE, size=2)
+g
+```
+
+---
+
+## Links and acknowledgements
+
+* The application can be found on shinyapps.io: https://mschwemm27.shinyapps.io/Project
+* The files for the app can be found on github:https://github.com/mschwemm27/DevDataProd
+* This application is based off and inspired by the NYT Interactive Graphic tutorial from the rCharts gallery (http://rcharts.io/nytinteractive/).
+
+
+
+
+
+
