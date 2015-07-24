@@ -26,7 +26,7 @@ Once the user makes this intial choice, a new set of suboptions will appear allo
 ---
 
 
-## Option 1: Visualization of baseball stats with rCharts
+## Option 1: Visualization of stats with rCharts
 
 * The first option allows the user to choose a stat to plot as a function of the year  
 * The data is then visualized using rPlot from rCharts similar to what is seen below 
